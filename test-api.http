@@ -1,0 +1,59 @@
+### 1. Đăng nhập tài khoản khách hàng
+POST http://127.0.0.1:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "customer@gmail.com",
+  "password": "customer123"
+}
+
+### 2. Xem toàn bộ danh sách sản phẩm
+GET http://127.0.0.1:8080/api/products
+
+### 3. Tìm kiếm sản phẩm theo từ khóa "La Roche"
+GET http://127.0.0.1:8080/api/products/search?keyword=La Roche
+
+### 4. Lọc sản phẩm theo khoảng giá (từ 350.000đ đến 500.000đ)
+GET http://127.0.0.1:8080/api/products/search?minPrice=350000&maxPrice=500000
+
+### 5. Sắp xếp giá giảm dần kèm phân trang (page=0, size=2, sortBy=price, direction=desc)
+GET http://127.0.0.1:8080/api/products/search?page=0&size=2&sortBy=price&direction=desc
+
+### 6. Khách hàng thêm sản phẩm vào giỏ (User ID = 2, Product ID = 2, số lượng = 1)
+POST http://127.0.0.1:8080/api/cart/add?userId=2&productId=2&quantity=1
+
+### 7. Xem giỏ hàng của User ID = 2
+GET http://127.0.0.1:8080/api/cart?userId=2
+
+### 8. Đặt hàng thanh toán kèm mã giảm giá SALE50K
+POST http://127.0.0.1:8080/api/orders/checkout?userId=2
+Content-Type: application/json
+
+{
+  "customerName": "Nguyễn Thị Lan",
+  "phone": "0987654321",
+  "shippingAddress": "123 Cầu Giấy, Hà Nội",
+  "note": "Giao giờ hành chính",
+  "couponCode": "SALE50K"
+}
+
+### 9. Xem lịch sử đơn hàng của User ID = 2
+GET http://127.0.0.1:8080/api/orders/user/2
+
+### 10. Admin duyệt đơn hàng sang CONFIRMED (Đã xác nhận)
+PUT http://127.0.0.1:8080/api/orders/1/status?status=CONFIRMED
+
+### 11. Admin cập nhật đơn hàng sang SHIPPING (Đang giao)
+PUT http://127.0.0.1:8080/api/orders/1/status?status=SHIPPING
+
+### 12. Giao hàng thành công (DELIVERED)
+PUT http://127.0.0.1:8080/api/orders/1/status?status=DELIVERED
+
+### 13. Hủy đơn hàng và tự động hoàn trả tồn kho (CANCELLED)
+PUT http://127.0.0.1:8080/api/orders/1/status?status=CANCELLED
+
+### 14. Xem chi tiết đơn hàng ID = 1
+GET http://127.0.0.1:8080/api/orders/1
+
+### Lấy số liệu thống kê Dashboard Admin
+GET http://127.0.0.1:8080/api/admin/dashboard/stats
