@@ -1,42 +1,72 @@
 package org.example.cosmeticshop.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.example.cosmeticshop.dto.AuthResponse;
 import org.example.cosmeticshop.dto.LoginRequest;
-import org.example.cosmeticshop.dto.RegisterRequest;
+import org.example.cosmeticshop.entity.Role;
 import org.example.cosmeticshop.entity.User;
-import org.example.cosmeticshop.service.UserService;
-import org.springframework.http.HttpStatus;
+import org.example.cosmeticshop.repository.RoleRepository;
+import org.example.cosmeticshop.repository.UserRepository;
+import org.example.cosmeticshop.service.JwtService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Authentication Controller", description = "API Đăng nhập, Đăng ký và Xác thực JWT")
 public class AuthController {
 
-    private final UserService userService;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
-    public AuthController(UserService userService) {
-        this.userService = userService;
+    public AuthController(UserRepository userRepository,
+                          RoleRepository roleRepository,
+                          PasswordEncoder passwordEncoder,
+                          JwtService jwtService) {
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
-    // POST: http://localhost:8080/api/auth/register
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-        try {
-            User registeredUser = userService.register(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(registeredUser);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    // POST: http://localhost:8080/api/auth/login
+    @Operation(summary = "Đăng nhập tài khoản, nhận Token JWT")
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        try {
-            User user = userService.login(request);
-            return ResponseEntity.ok("Đăng nhập thành công! Chào mừng: " + user.getFullName());
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
+        User user = userRepository.findByEmail(loginRequest.getEmail()).orElse(null);
+
+        if (user == null || (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())
+                && !loginRequest.getPassword().equals(user.getPassword()))) {
+            return ResponseEntity.badRequest().body("Email hoặc mật khẩu không chính xác!");
         }
+
+        String role = user.getPrimaryRoleName();
+        String token = jwtService.generateToken(user.getEmail(), role);
+
+        return ResponseEntity.ok(new AuthResponse(token, user.getId(), user.getEmail(), user.getFullName(), role));
+    }
+
+    @Operation(summary = "Đăng ký tài khoản người dùng mới")
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody User user) {
+        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+            return ResponseEntity.badRequest().body("Email đã tồn tại trên hệ thống!");
+        }
+
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+
+        if (user.getRoles() == null || user.getRoles().isEmpty()) {
+            Role customerRole = roleRepository.findByName("ROLE_CUSTOMER")
+                    .or(() -> roleRepository.findByName("CUSTOMER"))
+                    .orElseGet(() -> roleRepository.save(new Role("ROLE_CUSTOMER")));
+            user.getRoles().add(customerRole);
+        }
+        user.setActive(true);
+
+        User savedUser = userRepository.save(user);
+        return ResponseEntity.ok(savedUser);
     }
 }

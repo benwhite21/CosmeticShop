@@ -37,7 +37,6 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",
@@ -61,10 +60,8 @@ public class User {
         this.updatedAt = LocalDateTime.now();
     }
 
-    // 1. Constructor mặc định bắt buộc cho JPA
     public User() {}
 
-    // 2. Constructor tương thích với code UserService/Test cũ của bạn
     public User(Long id, String fullName, String email, String phone, String password, String roleName) {
         this.id = id;
         this.fullName = fullName;
@@ -76,7 +73,14 @@ public class User {
         }
     }
 
-    // Getters and Setters
+    // Lấy role đầu tiên đại diện cho user (CUSTOMER hoặc ADMIN)
+    public String getPrimaryRoleName() {
+        if (this.roles != null && !this.roles.isEmpty()) {
+            return this.roles.iterator().next().getName().replace("ROLE_", "");
+        }
+        return "CUSTOMER";
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
