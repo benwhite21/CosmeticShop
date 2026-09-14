@@ -37,7 +37,25 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Cho phép xem Swagger UI, ảnh upload và VNPAY callback công khai
+                        // 1. Cho phép tất cả giao diện HTML (Thymeleaf) & Tài nguyên tĩnh
+                        .requestMatchers(
+                                "/",
+                                "/home",
+                                "/login",
+                                "/products/**",
+                                "/cart/**",
+                                "/checkout/**",
+                                "/payment/**",
+                                "/admin/**",
+                                "/orders/**",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**",
+                                "/favicon.ico",
+                                "/error"
+                        ).permitAll()
+
+                        // 2. Swagger UI, Uploads & Callback VNPAY
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
@@ -46,16 +64,24 @@ public class SecurityConfig {
                                 "/api/payment/vnpay-callback"
                         ).permitAll()
 
-                        // Cho phép đăng ký/đăng nhập
+                        // 3. API xác thực công khai
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // Cho phép khách vãng lai xem danh mục, thương hiệu, sản phẩm
-                        .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**", "/api/brands/**", "/api/reviews/**").permitAll()
+                        // 4. API đọc dữ liệu sản phẩm / danh mục công khai
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/products/**",
+                                "/api/categories/**",
+                                "/api/brands/**",
+                                "/api/reviews/**"
+                        ).permitAll()
 
-                        // Phân quyền Admin cho dashboard
+                        // 5. API đơn hàng & giỏ hàng: cho phép người dùng/admin có token thực thi
+                        .requestMatchers("/api/orders/**", "/api/cart/**").authenticated()
+
+                        // 6. API quản trị hệ thống
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // Tất cả các request còn lại (giỏ hàng, đặt hàng, thanh toán, upload ảnh...) cần đăng nhập
+                        // 7. Quy tắc cuối cùng
                         .anyRequest().authenticated()
                 );
 

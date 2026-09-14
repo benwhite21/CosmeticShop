@@ -79,6 +79,39 @@ public class Product {
         updatedAt = LocalDateTime.now();
     }
 
+    // Helper method lấy đường dẫn ảnh đại diện đầu tiên cho View/Thymeleaf/JSON
+    @Transient
+    public String getImageUrl() {
+        if (images != null && !images.isEmpty() && images.get(0) != null) {
+            return images.get(0).getImageUrl();
+        }
+        return "https://placehold.co/300x220?text=Cosmetic";
+    }
+
+    // Setter hỗ trợ gán nhanh URL ảnh từ form hoặc DTO
+    public void setImageUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.trim().isEmpty()) {
+            return;
+        }
+        if (this.images == null) {
+            this.images = new ArrayList<>();
+        }
+        if (this.images.isEmpty()) {
+            ProductImage prodImg = new ProductImage();
+            prodImg.setImageUrl(imageUrl.trim());
+            prodImg.setProduct(this);
+            this.images.add(prodImg);
+        } else {
+            this.images.get(0).setImageUrl(imageUrl.trim());
+        }
+    }
+
+    // Alias getter tương thích với template gọi stockQuantity
+    @Transient
+    public Integer getStockQuantity() {
+        return this.stock;
+    }
+
     public Long getId() {
         return id;
     }

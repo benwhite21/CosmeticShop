@@ -19,13 +19,20 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     boolean existsBySlug(String slug);
 
+    // Tìm kiếm theo tên có phân trang (không phân biệt hoa thường)
+    Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+    // Lọc theo danh mục có phân trang
+    Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
+
+    // Câu lệnh Query lọc linh hoạt cho hàm filterProducts
     @Query("SELECT p FROM Product p WHERE " +
             "(:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
             "(:categoryId IS NULL OR p.category.id = :categoryId) AND " +
             "(:brandId IS NULL OR p.brand.id = :brandId) AND " +
             "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
             "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
-            "(p.status = :status)")
+            "(:status IS NULL OR p.status = :status)")
     Page<Product> filterProducts(
             @Param("keyword") String keyword,
             @Param("categoryId") Long categoryId,

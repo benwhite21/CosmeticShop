@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CosmeticShop - Thiên Đường Mỹ Phẩm Chính Hãng</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #e85a71;
+            --primary-hover: #d4435b;
+        }
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color) !important;
+            letter-spacing: 1px;
+        }
+        .btn-primary-custom {
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+        }
+        .btn-primary-custom:hover {
+            background-color: var(--primary-hover);
+            color: #fff;
+        }
+        .hero-banner {
+            background: linear-gradient(135deg, #ffeef1 0%, #ffd6dc 100%);
+            border-radius: 16px;
+            padding: 40px 20px;
+            margin-bottom: 30px;
+        }
+        .product-card {
+            border: 1px solid #f0f0f0;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+        }
+        .product-img {
+            height: 220px;
+            object-fit: cover;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+        .category-pill {
+            text-decoration: none;
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border-radius: 20px;
+            color: #495057;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+        .category-pill.active, .category-pill:hover {
+            background: var(--primary-color);
+            color: #fff;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+<!-- 1. Header / Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <div class="container">
+        <a class="navbar-brand" th:href="@{/}">
+            <i class="fa-solid fa-spa me-2"></i>CosmeticShop
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarContent">
+            <!-- Form Tìm Kiếm -->
+            <form class="d-flex mx-auto col-lg-5 my-2 my-lg-0" method="get" th:action="@{/}">
+                <div class="input-group">
+                    <input class="form-control" type="search" name="keyword" th:value="${keyword}" placeholder="Tìm son dưỡng, kem chống nắng, serum...">
+                    <button class="btn btn-primary-custom" type="submit">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
+            </form>
+
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item me-3">
+                    <a class="nav-link position-relative" th:href="@{/cart}">
+                        <i class="fa-solid fa-bag-shopping fs-5 text-secondary"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cartCountBadge">
+                            0
+                        </span>
+                    </a>
+                </li>
+                <li class="nav-item" id="authSection">
+                    <a class="btn btn-outline-secondary btn-sm rounded-pill px-3" th:href="@{/login}">
+                        <i class="fa-regular fa-user me-1"></i> Đăng nhập
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- 2. Main Content -->
+<div class="container my-4">
+
+    <!-- Hero Banner -->
+    <div class="hero-banner text-center text-md-start">
+        <div class="row align-items-center">
+            <div class="col-md-8 ps-md-4">
+                <h1 class="fw-bold text-dark">Chăm sóc làn da rạng ngời</h1>
+                <p class="text-muted">Ưu đãi độc quyền lên tới 50% cho các sản phẩm dưỡng da & trang điểm từ thương hiệu nổi tiếng.</p>
+                <a href="#productList" class="btn btn-primary-custom rounded-pill px-4 py-2">Khám phá ngay</a>
+            </div>
+            <div class="col-md-4 text-center mt-3 mt-md-0 d-none d-md-block">
+                <i class="fa-solid fa-heart fs-1" style="color: var(--primary-color);"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Danh mục sản phẩm -->
+    <div class="mb-4">
+        <h5 class="fw-bold mb-3"><i class="fa-solid fa-layer-group me-2 text-danger"></i>Danh mục</h5>
+        <div>
+            <a th:href="@{/}" class="category-pill" th:classappend="${selectedCategory == null} ? 'active' : ''">Tất cả</a>
+            <a th:each="cat : ${categories}"
+               th:href="@{/(categoryId=${cat.id})}"
+               class="category-pill"
+               th:classappend="${selectedCategory == cat.id} ? 'active' : ''"
+               th:text="${cat.name}">
+            </a>
+        </div>
+    </div>
+
+    <!-- Lưới sản phẩm -->
+    <div id="productList" class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold m-0"><i class="fa-solid fa-wand-magic-sparkles me-2 text-warning"></i>Sản phẩm nổi bật</h5>
+            <small class="text-muted" th:text="'Tổng cộng: ' + ${totalItems} + ' sản phẩm'"></small>
+        </div>
+
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+            <div class="col" th:each="product : ${products}">
+                <div class="card h-100 product-card shadow-sm">
+                    <a th:href="@{/products/{id}(id=${product.id})}">
+                        <img th:src="${product.imageUrl}" class="card-img-top product-img" alt="Sản phẩm">
+                    </a>
+                    <div class="card-body d-flex flex-column">
+                        <small class="text-muted" th:text="${product.brand != null ? product.brand.name : 'Chính hãng'}"></small>
+                        <h6 class="card-title fw-bold text-truncate mt-1">
+                            <a th:href="@{/products/{id}(id=${product.id})}" class="text-decoration-none text-dark" th:text="${product.name}"></a>
+                        </h6>
+                        <div class="mt-auto">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-danger fs-6"
+                                      th:text="${product.price != null ? #numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT') + ' đ' : 'Liên hệ'}">
+                                </span>
+                                <small class="text-muted">Kho: <span th:text="${product.stock}"></span></small>
+                            </div>
+                            <a th:href="@{/products/{id}(id=${product.id})}" class="btn btn-outline-danger w-100 rounded-pill btn-sm">
+                                <i class="fa-solid fa-eye me-1"></i> Xem chi tiết
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phân trang -->
+        <nav th:if="${totalPages != null and totalPages > 1}" class="mt-4">
+            <ul class="pagination justify-content-center">
+                <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                    <a class="page-link" th:href="@{/(page=${currentPage - 1}, categoryId=${selectedCategory}, keyword=${keyword})}">Trước</a>
+                </li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                    th:classappend="${currentPage == i} ? 'active' : ''">
+                    <a class="page-link" th:href="@{/(page=${i}, categoryId=${selectedCategory}, keyword=${keyword})}" th:text="${i + 1}"></a>
+                </li>
+                <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">
+                    <a class="page-link" th:href="@{/(page=${currentPage + 1}, categoryId=${selectedCategory}, keyword=${keyword})}">Sau</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+</div>
+
+<!-- 3. Footer -->
+<footer class="bg-white border-top py-4 text-center text-muted">
+    <div class="container">
+        <p class="mb-1 fw-bold text-dark"><i class="fa-solid fa-spa text-danger me-1"></i> CosmeticShop System</p>
+        <small>© 2026 CosmeticShop. Nền tảng phân phối mỹ phẩm trực tuyến uy tín.</small>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Kiểm tra trạng thái đăng nhập từ localStorage để cập nhật Navbar
+    const userStr = localStorage.getItem('user');
+    const user = userStr ? JSON.parse(userStr) : null;
+
+    if (user && (user.fullName || user.username)) {
+        // Kiểm tra xem user có quyền Quản trị viên (ADMIN) không
+        const roles = user.roles || (user.role ? [user.role] : []);
+        const isAdmin = roles.some(r => r === 'ADMIN' || r === 'ROLE_ADMIN');
+
+        const adminMenuHtml = isAdmin ? `
+            <li>
+                <a class="dropdown-item small text-danger fw-bold" href="/admin/products">
+                    <i class="fa-solid fa-pump-soap me-2"></i>Quản lý sản phẩm
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item small text-danger fw-bold" href="/admin/orders">
+                    <i class="fa-solid fa-boxes-stacked me-2"></i>Quản lý đơn hàng
+                </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+        ` : '';
+
+        document.getElementById('authSection').innerHTML = `
+            <div class="dropdown">
+                <button class="btn btn-sm ${isAdmin ? 'btn-dark' : 'btn-outline-dark'} rounded-pill dropdown-toggle px-3" type="button" data-bs-toggle="dropdown">
+                    <i class="fa-regular fa-circle-user me-1 ${isAdmin ? 'text-warning' : 'text-danger'}"></i>
+                    ${user.fullName || user.username}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 rounded-3">
+                    ${adminMenuHtml}
+                    <li><a class="dropdown-item small" href="/orders"><i class="fa-solid fa-box-archive me-2"></i>Đơn mua của tôi</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item small text-secondary" href="javascript:void(0)" onclick="logout()">
+                            <i class="fa-solid fa-right-from-bracket me-2"></i>Đăng xuất
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        `;
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.reload();
+    }
+</script>
+</body>
+</html>

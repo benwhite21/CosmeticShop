@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Sản phẩm - CosmeticShop Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root { --primary-color: #e85a71; --sidebar-width: 250px; }
+        body { background-color: #f4f6f9; }
+        .admin-sidebar { width: var(--sidebar-width); min-height: 100vh; background: #212529; position: fixed; top: 0; left: 0; z-index: 100; }
+        .admin-content { margin-left: var(--sidebar-width); padding: 30px; }
+        .sidebar-link { color: #adb5bd; text-decoration: none; padding: 12px 20px; display: flex; align-items: center; border-radius: 8px; margin: 4px 12px; }
+        .sidebar-link:hover, .sidebar-link.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
+        .sidebar-link.active { background: var(--primary-color); }
+        .product-thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; }
+    </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="admin-sidebar d-flex flex-column p-3">
+    <a th:href="@{/}" class="d-flex align-items-center mb-4 text-white text-decoration-none px-2 fs-5 fw-bold">
+        <i class="fa-solid fa-spa text-danger me-2"></i> Cosmetic Admin
+    </a>
+    <ul class="nav nav-pills flex-column mb-auto">
+        <li class="nav-item">
+            <a href="/admin/dashboard" class="sidebar-link">
+                <i class="fa-solid fa-chart-pie me-2"></i> Báo cáo thống kê
+            </a>
+        </li>
+    <ul class="nav nav-pills flex-column mb-auto">
+        <li class="nav-item">
+            <a href="/admin/orders" class="sidebar-link">
+                <i class="fa-solid fa-boxes-stacked me-2"></i> Quản lý đơn hàng
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="/admin/products" class="sidebar-link active">
+                <i class="fa-solid fa-pump-soap me-2"></i> Quản lý sản phẩm
+            </a>
+        </li>
+        <li class="nav-item">
+            <a th:href="@{/}" class="sidebar-link">
+                <i class="fa-solid fa-store me-2"></i> Về cửa hàng
+            </a>
+        </li>
+    </ul>
+    <hr class="text-secondary">
+    <div class="px-2">
+        <button class="btn btn-outline-danger btn-sm w-100 rounded-pill" onclick="logoutAdmin()">
+            <i class="fa-solid fa-right-from-bracket me-1"></i> Đăng xuất
+        </button>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="admin-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold m-0 text-dark">Quản lý Sản phẩm</h3>
+            <small class="text-muted">Thêm mới, sửa thông tin giá và tồn kho sản phẩm</small>
+        </div>
+        <button class="btn btn-danger rounded-pill px-3" onclick="openCreateModal()">
+            <i class="fa-solid fa-plus me-1"></i> Thêm sản phẩm
+        </button>
+    </div>
+
+    <!-- Danh sách sản phẩm -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 table-hover">
+                <thead class="table-light">
+                <tr>
+                    <th class="ps-4">Sản phẩm</th>
+                    <th>Danh mục</th>
+                    <th>Thương hiệu</th>
+                    <th>Đơn giá</th>
+                    <th class="text-center">Kho</th>
+                    <th class="text-center pe-4">Thao tác</th>
+                </tr>
+                </thead>
+                <tbody id="productTbody">
+                <!-- JS nạp dữ liệu -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Thêm/Sửa Sản phẩm -->
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="modalTitle">Thêm sản phẩm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="prodId">
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Tên sản phẩm (*)</label>
+                    <input type="text" class="form-control" id="prodName" required>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">Giá bán (đ) (*)</label>
+                        <input type="number" class="form-control" id="prodPrice" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">Tồn kho (*)</label>
+                        <input type="number" class="form-control" id="prodStock" required>
+                    </div>
+                </div>
+
+                <!-- Tùy chọn ảnh: Tab chọn File hoặc Dán Link -->
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Hình ảnh sản phẩm</label>
+                    <ul class="nav nav-pills nav-fill mb-2 p-1 bg-light rounded-3" id="imageTabs">
+                        <li class="nav-item">
+                            <button class="nav-link active py-1 small" id="tab-file-btn" type="button" onclick="switchImageTab('file')">
+                                <i class="fa-solid fa-folder-open me-1"></i> Từ máy tính
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1 small" id="tab-url-btn" type="button" onclick="switchImageTab('url')">
+                                <i class="fa-solid fa-link me-1"></i> Dán link URL
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Input 1: File từ máy tính -->
+                    <div id="fileUploadContainer">
+                        <input type="file" class="form-control form-control-sm" id="fileUploadInput" accept="image/*" onchange="previewSelectedFile(event)">
+                    </div>
+
+                    <!-- Input 2: Nhập Link Online -->
+                    <div id="urlInputContainer" style="display: none;">
+                        <input type="text" class="form-control form-control-sm" id="urlInput" placeholder="https://domain.com/image.jpg" oninput="previewUrlImage(this.value)">
+                    </div>
+
+                    <!-- Khung Preview ảnh -->
+                    <div class="text-center p-2 border rounded-3 bg-light mt-2" id="imagePreviewContainer" style="display: none;">
+                        <img id="imagePreview" src="" alt="Xem trước ảnh" style="max-height: 120px; max-width: 100%; border-radius: 6px; object-fit: contain;">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Mô tả</label>
+                    <textarea class="form-control" id="prodDesc" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-danger rounded-pill px-4" id="btnSaveProduct" onclick="saveProduct()">Lưu thông tin</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const token = localStorage.getItem('token');
+    let productList = [];
+    let currentImageMode = 'file'; // 'file' hoặc 'url'
+    let existingImageUrl = '';
+    const productModal = new bootstrap.Modal(document.getElementById('productModal'));
+
+    if (!token) {
+        alert('Vui lòng đăng nhập với tài khoản Admin!');
+        window.location.href = '/login';
+    }
+
+    function switchImageTab(mode) {
+        currentImageMode = mode;
+        const fileContainer = document.getElementById('fileUploadContainer');
+        const urlContainer = document.getElementById('urlInputContainer');
+        const btnFile = document.getElementById('tab-file-btn');
+        const btnUrl = document.getElementById('tab-url-btn');
+
+        if (mode === 'file') {
+            fileContainer.style.display = 'block';
+            urlContainer.style.display = 'none';
+            btnFile.classList.add('active');
+            btnUrl.classList.remove('active');
+        } else {
+            fileContainer.style.display = 'none';
+            urlContainer.style.display = 'block';
+            btnFile.classList.remove('active');
+            btnUrl.classList.add('active');
+        }
+    }
+
+    function previewSelectedFile(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('imagePreview').src = e.target.result;
+                document.getElementById('imagePreviewContainer').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function previewUrlImage(url) {
+        if (url && url.trim().length > 5) {
+            document.getElementById('imagePreview').src = url.trim();
+            document.getElementById('imagePreviewContainer').style.display = 'block';
+        } else {
+            document.getElementById('imagePreviewContainer').style.display = 'none';
+        }
+    }
+
+    async function loadProducts() {
+        try {
+            const res = await fetch('/api/products');
+            if (res.ok) {
+                const data = await res.json();
+                productList = data.content ? data.content : data;
+                renderProducts();
+            }
+        } catch (e) {
+            console.error('Lỗi tải sản phẩm:', e);
+        }
+    }
+
+    function renderProducts() {
+        const tbody = document.getElementById('productTbody');
+        tbody.innerHTML = '';
+
+        productList.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="ps-4">
+                    <div class="d-flex align-items-center">
+                        <img src="${p.imageUrl || 'https://placehold.co/50x50'}" class="product-thumb me-3" alt="Ảnh">
+                        <div>
+                            <div class="fw-semibold text-truncate" style="max-width: 250px;">${p.name}</div>
+                            <small class="text-muted">ID: #${p.id}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>${p.category ? p.category.name : '-'}</td>
+                <td>${p.brand ? p.brand.name : '-'}</td>
+                <td class="fw-bold text-danger">${Number(p.price || 0).toLocaleString('vi-VN')} đ</td>
+                <td class="text-center fw-semibold">${p.stock}</td>
+                <td class="text-center pe-4">
+                    <button class="btn btn-sm btn-outline-primary rounded-pill me-1" onclick="openEditModal(${p.id})">
+                        <i class="fa-regular fa-pen-to-square"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="deleteProduct(${p.id})">
+                        <i class="fa-regular fa-trash-can"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function openCreateModal() {
+        document.getElementById('modalTitle').innerText = 'Thêm sản phẩm';
+        document.getElementById('prodId').value = '';
+        document.getElementById('prodName').value = '';
+        document.getElementById('prodPrice').value = '';
+        document.getElementById('prodStock').value = '10';
+        document.getElementById('prodDesc').value = '';
+        document.getElementById('fileUploadInput').value = '';
+        document.getElementById('urlInput').value = '';
+        document.getElementById('imagePreviewContainer').style.display = 'none';
+        document.getElementById('imagePreview').src = '';
+        existingImageUrl = '';
+        switchImageTab('file');
+        productModal.show();
+    }
+
+    function openEditModal(id) {
+        const p = productList.find(item => item.id === id);
+        if (!p) return;
+        document.getElementById('modalTitle').innerText = 'Sửa thông tin sản phẩm';
+        document.getElementById('prodId').value = p.id;
+        document.getElementById('prodName').value = p.name;
+        document.getElementById('prodPrice').value = p.price;
+        document.getElementById('prodStock').value = p.stock;
+        document.getElementById('prodDesc').value = p.description || '';
+        document.getElementById('fileUploadInput').value = '';
+        document.getElementById('urlInput').value = p.imageUrl || '';
+        existingImageUrl = p.imageUrl || '';
+
+        if (existingImageUrl) {
+            document.getElementById('imagePreview').src = existingImageUrl;
+            document.getElementById('imagePreviewContainer').style.display = 'block';
+            switchImageTab('url');
+        } else {
+            document.getElementById('imagePreviewContainer').style.display = 'none';
+            document.getElementById('imagePreview').src = '';
+            switchImageTab('file');
+        }
+        productModal.show();
+    }
+
+    async function saveProduct() {
+        const btnSave = document.getElementById('btnSaveProduct');
+        const fileInput = document.getElementById('fileUploadInput');
+        const urlInput = document.getElementById('urlInput').value.trim();
+        let finalImageUrl = existingImageUrl;
+
+        // Trường hợp 1: Chọn tab File và có đính kèm file mới
+        if (currentImageMode === 'file' && fileInput.files.length > 0) {
+            btnSave.disabled = true;
+            btnSave.innerText = 'Đang tải ảnh...';
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const uploadRes = await fetch('/api/admin/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: formData
+                });
+
+                if (uploadRes.ok) {
+                    const uploadData = await uploadRes.json();
+                    finalImageUrl = uploadData.url;
+                } else {
+                    alert('Tải ảnh lên thất bại!');
+                    btnSave.disabled = false;
+                    btnSave.innerText = 'Lưu thông tin';
+                    return;
+                }
+            } catch (err) {
+                alert('Lỗi kết nối khi tải ảnh!');
+                btnSave.disabled = false;
+                btnSave.innerText = 'Lưu thông tin';
+                return;
+            }
+        }
+        // Trường hợp 2: Chọn tab dán Link URL
+        else if (currentImageMode === 'url' && urlInput) {
+            finalImageUrl = urlInput;
+        }
+
+        const id = document.getElementById('prodId').value;
+        const payload = {
+            name: document.getElementById('prodName').value.trim(),
+            price: parseFloat(document.getElementById('prodPrice').value),
+            stock: parseInt(document.getElementById('prodStock').value),
+            imageUrl: finalImageUrl,
+            description: document.getElementById('prodDesc').value.trim()
+        };
+
+        if (!payload.name || isNaN(payload.price) || isNaN(payload.stock)) {
+            alert('Vui lòng nhập đầy đủ thông tin tên, giá và số lượng tồn!');
+            btnSave.disabled = false;
+            btnSave.innerText = 'Lưu thông tin';
+            return;
+        }
+
+        btnSave.innerText = 'Đang lưu...';
+
+        const url = id ? `/api/admin/products/${id}` : '/api/admin/products';
+        const method = id ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                productModal.hide();
+                loadProducts();
+            } else {
+                alert('Lưu sản phẩm thất bại! Kiểm tra quyền Admin.');
+            }
+        } catch (e) {
+            alert('Lỗi kết nối máy chủ!');
+        } finally {
+            btnSave.disabled = false;
+            btnSave.innerText = 'Lưu thông tin';
+        }
+    }
+
+    async function deleteProduct(id) {
+        if (!confirm('Bạn có chắc muốn xóa sản phẩm này không?')) return;
+        try {
+            const res = await fetch(`/api/admin/products/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.ok) {
+                loadProducts();
+            } else {
+                alert('Không thể xóa sản phẩm đã có trong đơn hàng!');
+            }
+        } catch (e) {
+            alert('Lỗi kết nối máy chủ!');
+        }
+    }
+
+    function logoutAdmin() {
+        localStorage.clear();
+        window.location.href = '/login';
+    }
+
+    window.onload = loadProducts;
+</script>
+</body>
+</html>

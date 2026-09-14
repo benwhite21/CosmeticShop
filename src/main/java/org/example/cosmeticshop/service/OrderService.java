@@ -7,6 +7,7 @@ import org.example.cosmeticshop.repository.OrderRepository;
 import org.example.cosmeticshop.repository.ProductRepository;
 import org.example.cosmeticshop.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,6 +68,14 @@ public class OrderService {
         this.couponRepository = couponRepository;
     }
 
+    // Lấy toàn bộ danh sách đơn hàng cho trang Admin Dashboard
+    public List<Order> getAllOrders() {
+        if (orderRepository != null) {
+            return orderRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
+        }
+        return memoryOrders;
+    }
+
     public Order createOrder(long userId, String customerName, String phone, String shippingAddress,
                              PaymentMethod paymentMethod, List<CartItem> items) {
         if (items == null || items.isEmpty()) {
@@ -116,7 +125,7 @@ public class OrderService {
             Order order = orderRepository.findById(orderId)
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng ID: " + orderId));
 
-            // Nếu đơn hàng chuyển sang CANCELLED và đơn trước đó chưa bị hủy -> hoàn lại tồn kho cho sản phẩm
+            // Nếu đơn hàng chuyển sang CANCELLED và đơn trước đó chưa bị hủy -> hoàn lại tồn kho
             if (newStatus == OrderStatus.CANCELLED && order.getStatus() != OrderStatus.CANCELLED) {
                 for (OrderItem item : order.getItems()) {
                     Product product = item.getProduct();
@@ -140,6 +149,7 @@ public class OrderService {
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng ID: " + orderId));
         }
     }
+
     @Transactional
     public Order placeOrder(Long userId, OrderRequest request) {
         if (userRepository == null || cartService == null || orderRepository == null || productRepository == null) {

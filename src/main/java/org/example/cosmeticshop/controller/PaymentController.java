@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.example.cosmeticshop.service.PaymentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.view.RedirectView;
 
 import java.util.Collections;
 import java.util.Map;
@@ -34,12 +35,16 @@ public class PaymentController {
 
     @Operation(summary = "VNPAY callback xử lý kết quả thanh toán")
     @GetMapping("/vnpay-callback")
-    public ResponseEntity<?> vnpayCallback(@RequestParam Map<String, String> queryParams) {
+    public RedirectView vnpayCallback(@RequestParam Map<String, String> queryParams) {
         boolean isSuccess = paymentService.processCallback(queryParams);
+        String orderId = queryParams.getOrDefault("vnp_TxnRef", "");
+
         if (isSuccess) {
-            return ResponseEntity.ok("Thanh toán thành công! Đơn hàng đã được xác nhận.");
+            // Chuyển hướng về giao diện thanh toán thành công
+            return new RedirectView("/payment/success?orderId=" + orderId);
         } else {
-            return ResponseEntity.badRequest().body("Thanh toán thất bại hoặc bị hủy bởi khách hàng.");
+            // Chuyển hướng về giỏ hàng nếu thất bại kèm cảnh báo
+            return new RedirectView("/cart?error=payment_failed");
         }
     }
 }

@@ -1,6 +1,8 @@
 package org.example.cosmeticshop.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -13,13 +15,14 @@ public class CartItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_id")
     private Cart cart;
 
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
+    // Cho phép Jackson tuần tự hóa Product nhưng bỏ qua các quan hệ lồng nhau không cần thiết
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "images", "category", "brand"})
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id")
     private Product product;
 
@@ -39,6 +42,28 @@ public class CartItem {
         this.quantity = quantity;
     }
 
+    // Các trường JSON tiện ích để frontend luôn đọc được kể cả khi cấu trúc phẳng
+    @JsonProperty("productId")
+    public Long getProductId() {
+        return product != null ? product.getId() : null;
+    }
+
+    @JsonProperty("productName")
+    public String getProductName() {
+        return product != null ? product.getName() : "Mỹ phẩm chính hãng";
+    }
+
+    @JsonProperty("price")
+    public BigDecimal getPrice() {
+        return product != null ? product.getPrice() : BigDecimal.ZERO;
+    }
+
+    @JsonProperty("imageUrl")
+    public String getImageUrl() {
+        return product != null ? product.getImageUrl() : "https://placehold.co/65x65?text=SP";
+    }
+
+    @JsonProperty("subtotal")
     public Double getSubtotal() {
         if (product == null || product.getPrice() == null || quantity == null) {
             return 0.0;

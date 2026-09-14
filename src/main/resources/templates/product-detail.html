@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${product.name} + ' - CosmeticShop'"></title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #e85a71;
+            --primary-hover: #d4435b;
+        }
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color) !important;
+        }
+        .btn-primary-custom {
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+        }
+        .btn-primary-custom:hover {
+            background-color: var(--primary-hover);
+            color: #fff;
+        }
+        .main-img {
+            max-height: 420px;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+        .star-rating {
+            font-size: 1.6rem;
+            cursor: pointer;
+            color: #ccc;
+        }
+        .star-rating .fa-star.active,
+        .star-rating .fa-star:hover,
+        .star-rating .fa-star:hover ~ .fa-star {
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <div class="container">
+        <a class="navbar-brand" th:href="@{/}">
+            <i class="fa-solid fa-spa me-2"></i>CosmeticShop
+        </a>
+        <a th:href="@{/}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="fa-solid fa-arrow-left me-1"></i> Quay lại cửa hàng
+        </a>
+    </div>
+</nav>
+
+<!-- Main Detail -->
+<div class="container my-5">
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <div class="row g-4">
+            <!-- Cột ảnh sản phẩm -->
+            <div class="col-md-5 text-center">
+                <img th:src="${product.imageUrl}" class="img-fluid main-img shadow-sm w-100" alt="Ảnh sản phẩm">
+            </div>
+
+            <!-- Cột thông tin sản phẩm -->
+            <div class="col-md-7 d-flex flex-column">
+                <div>
+                    <span class="badge bg-danger-subtle text-danger px-3 py-2 rounded-pill mb-2"
+                          th:text="${product.brand != null ? product.brand.name : 'Chính hãng'}">
+                    </span>
+                    <span class="badge bg-secondary-subtle text-secondary px-3 py-2 rounded-pill mb-2 ms-1"
+                          th:text="${product.category != null ? product.category.name : 'Mỹ phẩm'}">
+                    </span>
+                </div>
+
+                <h2 class="fw-bold my-2" th:text="${product.name}"></h2>
+
+                <h3 class="fw-bold text-danger my-3"
+                    th:text="${product.price != null ? #numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT') + ' đ' : 'Liên hệ'}">
+                </h3>
+
+                <div class="mb-3 text-muted">
+                    <span><i class="fa-solid fa-boxes-stacked me-1 text-secondary"></i> Trạng thái kho: </span>
+                    <span class="fw-semibold text-dark" th:text="${product.stock} + ' sản phẩm có sẵn'"></span>
+                </div>
+
+                <div class="mb-4">
+                    <h6 class="fw-bold"><i class="fa-regular fa-file-lines me-1"></i> Mô tả chi tiết:</h6>
+                    <p class="text-secondary" style="white-space: pre-line;"
+                       th:text="${product.description != null && !product.description.isEmpty() ? product.description : 'Sản phẩm chính hãng với nguồn gốc xuất xứ rõ ràng, cam kết an toàn cho mọi làn da.'}">
+                    </p>
+                </div>
+
+                <div class="mt-auto pt-3 border-top d-flex gap-3">
+                    <input type="number" id="productQuantity" class="form-control text-center" value="1" min="1" th:max="${product.stock}" style="width: 80px;" aria-label="Số lượng sản phẩm">
+                    <button class="btn btn-primary-custom flex-grow-1 rounded-pill py-2"
+                            id="btnAddToCart"
+                            th:attr="data-product-id=${product.id}"
+                            onclick="addToCart(this)">
+                        <i class="fa-solid fa-cart-plus me-1"></i> Thêm vào giỏ hàng
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Khu vực Đánh giá & Nhận xét -->
+    <div class="card border-0 shadow-sm rounded-4 p-4">
+        <h5 class="fw-bold mb-3"><i class="fa-solid fa-star text-warning me-2"></i>Đánh giá từ khách hàng</h5>
+
+        <!-- Điểm đánh giá trung bình -->
+        <div class="d-flex align-items-center bg-light p-3 rounded-4 mb-4">
+            <div class="me-4 text-center">
+                <h1 class="fw-bold text-danger mb-0" id="avgRatingDisplay">0.0</h1>
+                <small class="text-muted">trên 5 sao</small>
+            </div>
+            <div>
+                <div class="text-warning fs-5" id="avgRatingStars">
+                    <i class="fa-regular fa-star"></i>
+                    <i class="fa-regular fa-star"></i>
+                    <i class="fa-regular fa-star"></i>
+                    <i class="fa-regular fa-star"></i>
+                    <i class="fa-regular fa-star"></i>
+                </div>
+                <small class="text-muted mt-1 d-block" id="totalReviewsCount">Dựa trên 0 lượt đánh giá</small>
+            </div>
+        </div>
+
+        <!-- Form gửi đánh giá -->
+        <div class="border p-3 rounded-4 mb-4 bg-white">
+            <h6 class="fw-bold mb-2">Viết đánh giá của bạn</h6>
+            <div class="d-flex align-items-center mb-2">
+                <span class="me-3 small text-muted">Chất lượng:</span>
+                <div class="star-rating d-inline-flex flex-row-reverse" id="starContainer">
+                    <i class="fa-solid fa-star p-1" data-val="5" onclick="setRating(5)"></i>
+                    <i class="fa-solid fa-star p-1" data-val="4" onclick="setRating(4)"></i>
+                    <i class="fa-solid fa-star p-1" data-val="3" onclick="setRating(3)"></i>
+                    <i class="fa-solid fa-star p-1" data-val="2" onclick="setRating(2)"></i>
+                    <i class="fa-solid fa-star p-1 active" data-val="1" onclick="setRating(1)"></i>
+                </div>
+                <span class="ms-2 badge bg-warning text-dark" id="ratingText">5 sao - Tuyệt vời</span>
+            </div>
+            <textarea class="form-control mb-2 rounded-3" id="reviewComment" rows="3" placeholder="Chia sẻ cảm nhận của bạn về sản phẩm này..."></textarea>
+            <div class="text-end">
+                <button class="btn btn-primary-custom rounded-pill btn-sm px-4" onclick="submitReview()">
+                    <i class="fa-solid fa-paper-plane me-1"></i> Gửi đánh giá
+                </button>
+            </div>
+        </div>
+
+        <!-- Danh sách nhận xét -->
+        <div id="reviewList" class="d-flex flex-column gap-3">
+            <div class="text-center text-muted py-3 small">Đang tải đánh giá...</div>
+        </div>
+    </div>
+</div>
+
+<footer class="bg-white border-top py-4 text-center text-muted mt-5">
+    <div class="container">
+        <p class="mb-1 fw-bold text-dark"><i class="fa-solid fa-spa text-danger me-1"></i> CosmeticShop System</p>
+        <small>© 2026 CosmeticShop. Nền tảng phân phối mỹ phẩm trực tuyến uy tín.</small>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    const currentProductId = /*[[${product.id}]]*/ 0;
+    let selectedRating = 5;
+
+    const RATING_DESC = {
+        1: '1 sao - Rất tệ',
+        2: '2 sao - Không hài lòng',
+        3: '3 sao - Bình thường',
+        4: '4 sao - Tốt',
+        5: '5 sao - Tuyệt vời'
+    };
+
+    function setRating(val) {
+        selectedRating = val;
+        document.getElementById('ratingText').innerText = RATING_DESC[val] || `${val} sao`;
+        const stars = document.querySelectorAll('#starContainer i');
+        stars.forEach(star => {
+            const starVal = parseInt(star.getAttribute('data-val'));
+            if (starVal <= val) {
+                star.classList.add('active');
+            } else {
+                star.classList.remove('active');
+            }
+        });
+    }
+
+    async function loadReviews() {
+        try {
+            const res = await fetch(`/api/reviews/product/${currentProductId}`);
+            if (res.ok) {
+                const reviews = await res.json();
+                renderReviews(reviews);
+            }
+        } catch (e) {
+            console.error('Lỗi tải đánh giá:', e);
+        }
+    }
+
+    function renderReviews(reviews) {
+        const total = reviews.length;
+        document.getElementById('totalReviewsCount').innerText = `Dựa trên ${total} lượt đánh giá`;
+
+        if (total === 0) {
+            document.getElementById('avgRatingDisplay').innerText = '5.0';
+            document.getElementById('reviewList').innerHTML = '<div class="text-center text-muted py-4 small">Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên nhận xét!</div>';
+            return;
+        }
+
+        const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / total;
+        document.getElementById('avgRatingDisplay').innerText = avg.toFixed(1);
+
+        // Render sao trung bình
+        let starsHtml = '';
+        for (let i = 1; i <= 5; i++) {
+            if (i <= Math.round(avg)) {
+                starsHtml += '<i class="fa-solid fa-star text-warning"></i> ';
+            } else {
+                starsHtml += '<i class="fa-regular fa-star text-warning"></i> ';
+            }
+        }
+        document.getElementById('avgRatingStars').innerHTML = starsHtml;
+
+        // Render danh sách review
+        const listContainer = document.getElementById('reviewList');
+        listContainer.innerHTML = '';
+
+        reviews.forEach(r => {
+            let starIcons = '';
+            for (let i = 1; i <= 5; i++) {
+                starIcons += i <= r.rating ? '<i class="fa-solid fa-star text-warning small"></i>' : '<i class="fa-regular fa-star text-muted small"></i>';
+            }
+
+            const reviewerName = r.user ? (r.user.fullName || r.user.username || r.user.email || 'Khách hàng') : 'Khách hàng';
+            const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleDateString('vi-VN') : '';
+
+            const item = document.createElement('div');
+            item.className = 'p-3 bg-light rounded-3';
+            item.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center me-2" style="width: 34px; height: 34px;">
+                            <i class="fa-solid fa-user text-secondary"></i>
+                        </div>
+                        <strong class="small text-dark">${reviewerName}</strong>
+                    </div>
+                    <small class="text-muted">${dateStr}</small>
+                </div>
+                <div class="mb-2">${starIcons}</div>
+                <p class="text-secondary small mb-0">${r.comment || 'Không có nhận xét chi tiết.'}</p>
+            `;
+            listContainer.appendChild(item);
+        });
+    }
+
+    async function submitReview() {
+        const token = localStorage.getItem('token');
+        const userStr = localStorage.getItem('user');
+
+        if (!token || !userStr) {
+            alert('Vui lòng đăng nhập để gửi đánh giá!');
+            window.location.href = '/login';
+            return;
+        }
+
+        const user = JSON.parse(userStr);
+        const userId = user.id || user.userId;
+        const comment = document.getElementById('reviewComment').value.trim();
+
+        const payload = {
+            rating: selectedRating,
+            comment: comment
+        };
+
+        try {
+            const res = await fetch(`/api/reviews?userId=${userId}&productId=${currentProductId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert('Cảm ơn bạn đã gửi đánh giá!');
+                document.getElementById('reviewComment').value = '';
+                loadReviews();
+            } else {
+                const err = await res.text();
+                alert('Gửi đánh giá thất bại: ' + err);
+            }
+        } catch (e) {
+            alert('Lỗi kết nối máy chủ!');
+        }
+    }
+
+    async function addToCart(buttonElement) {
+        const token = localStorage.getItem('token');
+        const userStr = localStorage.getItem('user');
+
+        if (!token || !userStr) {
+            alert('Vui lòng đăng nhập để thêm sản phẩm vào giỏ!');
+            window.location.href = '/login';
+            return;
+        }
+
+        const user = JSON.parse(userStr);
+        const userId = user.id || user.userId;
+        const productId = buttonElement.getAttribute('data-product-id');
+        const quantity = parseInt(document.getElementById('productQuantity').value) || 1;
+
+        const url = `/api/cart/add?userId=${userId}&productId=${productId}&quantity=${quantity}`;
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            });
+
+            if (res.ok) {
+                if (confirm('Thêm vào giỏ hàng thành công! Bạn có muốn đến giỏ hàng ngay?')) {
+                    window.location.href = '/cart';
+                }
+            } else {
+                const errText = await res.text();
+                alert('Lỗi (' + res.status + '): ' + errText);
+            }
+        } catch (err) {
+            console.error('Lỗi kết nối:', err);
+            alert('Lỗi kết nối máy chủ!');
+        }
+    }
+
+    window.onload = function() {
+        setRating(5);
+        loadReviews();
+    };
+</script>
+</body>
+</html>

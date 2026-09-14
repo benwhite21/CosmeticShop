@@ -1,38 +1,53 @@
 package org.example.cosmeticshop.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import org.example.cosmeticshop.service.FileUploadService;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Collections;
-import java.util.Map;
+import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/files")
-@Tag(name = "File Upload Controller", description = "API tải lên hình ảnh sản phẩm và tài nguyên")
+@RequestMapping("/api/admin/upload")
 public class FileUploadController {
 
-    private final FileUploadService fileUploadService;
+    private final String UPLOAD_DIR = "uploads/";
 
-    public FileUploadController(FileUploadService fileUploadService) {
-        this.fileUploadService = fileUploadService;
-    }
+    @PostMapping
+    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body("File không được để trống!");
+        }
 
-    @Operation(summary = "Tải lên 1 ảnh từ máy tính (trả về đường dẫn URL ảnh)")
-    @PostMapping(value = "/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) {
         try {
-            String fileUrl = fileUploadService.storeFile(file);
-            Map<String, String> response = Collections.singletonMap("url", fileUrl);
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(e.getMessage());
+            Path uploadPath = Paths.get(UPLOAD_DIR);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            // Tạo tên file duy nhất tránh trùng lặp
+            String originalFileName = file.getOriginalFilename();
+            String extension = "";
+            if (originalFileName != null && originalFileName.contains(".")) {
+                extension = originalFileName.substring(originalFileName.lastIndexOf("."));
+            }
+            String newFileName = UUID.randomUUID().toString() + extension;
+
+            // Lưu file vào thư mục uploads/
+            Path filePath = uploadPath.resolve(newFileName);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            // Trả về đường dẫn ảnh công khai
+            String fileUrl = "/uploads/" + newFileName;
+            return ResponseEntity.ok(Collections.singletonMap("url", fileUrl));
+
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().body("Lỗi khi tải file lên: " + e.getMessage());
         }
     }
 }

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thống kê & Báo cáo - CosmeticShop Admin</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #e85a71;
+            --sidebar-width: 250px;
+        }
+        body {
+            background-color: #f4f6f9;
+        }
+        .admin-sidebar {
+            width: var(--sidebar-width);
+            min-height: 100vh;
+            background: #212529;
+            color: #fff;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+        .admin-content {
+            margin-left: var(--sidebar-width);
+            padding: 30px;
+        }
+        .sidebar-link {
+            color: #adb5bd;
+            text-decoration: none;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            border-radius: 8px;
+            margin: 4px 12px;
+            transition: all 0.2s;
+        }
+        .sidebar-link:hover, .sidebar-link.active {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .sidebar-link.active {
+            background: var(--primary-color);
+        }
+        .stat-card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+        }
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 1.25rem;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="admin-sidebar d-flex flex-column p-3">
+    <a th:href="@{/}" class="d-flex align-items-center mb-4 text-white text-decoration-none px-2 fs-5 fw-bold">
+        <i class="fa-solid fa-spa text-danger me-2"></i> Cosmetic Admin
+    </a>
+    <ul class="nav nav-pills flex-column mb-auto">
+        <li class="nav-item">
+            <a href="/admin/dashboard" class="sidebar-link active">
+                <i class="fa-solid fa-chart-pie me-2"></i> Báo cáo thống kê
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="/admin/orders" class="sidebar-link">
+                <i class="fa-solid fa-boxes-stacked me-2"></i> Quản lý đơn hàng
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="/admin/products" class="sidebar-link">
+                <i class="fa-solid fa-pump-soap me-2"></i> Quản lý sản phẩm
+            </a>
+        </li>
+        <li class="nav-item">
+            <a th:href="@{/}" class="sidebar-link">
+                <i class="fa-solid fa-store me-2"></i> Về cửa hàng
+            </a>
+        </li>
+    </ul>
+    <hr class="text-secondary">
+    <div class="px-2">
+        <button class="btn btn-outline-danger btn-sm w-100 rounded-pill" onclick="logoutAdmin()">
+            <i class="fa-solid fa-right-from-bracket me-1"></i> Đăng xuất
+        </button>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="admin-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold m-0 text-dark">Tổng quan kinh doanh</h3>
+            <small class="text-muted">Theo dõi doanh thu, hiệu suất đơn hàng và lượng hàng tồn kho</small>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="loadDashboardStats()">
+            <i class="fa-solid fa-rotate me-1"></i> Cập nhật
+        </button>
+    </div>
+
+    <!-- 4 Khối số liệu (KPI Cards) -->
+    <div class="row g-3 mb-4">
+        <!-- Tổng doanh thu -->
+        <div class="col-md-3">
+            <div class="card stat-card p-3 bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-semibold">Tổng doanh thu</small>
+                        <h4 class="fw-bold text-success mt-1 mb-0" id="statRevenue">0 đ</h4>
+                    </div>
+                    <div class="stat-icon bg-success-subtle text-success">
+                        <i class="fa-solid fa-sack-dollar"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Đơn thành công -->
+        <div class="col-md-3">
+            <div class="card stat-card p-3 bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-semibold">Đơn hoàn thành</small>
+                        <h4 class="fw-bold text-primary mt-1 mb-0" id="statCompletedOrders">0</h4>
+                    </div>
+                    <div class="stat-icon bg-primary-subtle text-primary">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Đơn chờ duyệt -->
+        <div class="col-md-3">
+            <div class="card stat-card p-3 bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-semibold">Chờ xác nhận</small>
+                        <h4 class="fw-bold text-warning mt-1 mb-0" id="statPendingOrders">0</h4>
+                    </div>
+                    <div class="stat-icon bg-warning-subtle text-warning">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tổng sản phẩm -->
+        <div class="col-md-3">
+            <div class="card stat-card p-3 bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-semibold">Tổng sản phẩm</small>
+                        <h4 class="fw-bold text-dark mt-1 mb-0" id="statTotalProducts">0</h4>
+                    </div>
+                    <div class="stat-icon bg-secondary-subtle text-dark">
+                        <i class="fa-solid fa-box-open"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Biểu đồ doanh thu Chart.js -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold m-0 text-dark">
+                <i class="fa-solid fa-chart-line text-danger me-2"></i>Biểu đồ Doanh thu (7 ngày gần nhất)
+            </h6>
+            <span class="badge bg-light text-secondary border">Đơn vị: VNĐ</span>
+        </div>
+        <div style="height: 300px; position: relative;">
+            <canvas id="revenueChart"></canvas>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Đơn hàng gần đây -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold m-0"><i class="fa-solid fa-receipt me-2 text-primary"></i>Đơn hàng gần đây</h6>
+                    <a href="/admin/orders" class="small text-decoration-none fw-semibold">Xem tất cả <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0 table-hover">
+                        <thead class="table-light small">
+                        <tr>
+                            <th class="ps-4">Mã đơn</th>
+                            <th>Khách hàng</th>
+                            <th>Phương thức</th>
+                            <th>Thanh toán</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                        </thead>
+                        <tbody id="recentOrdersTbody">
+                        <!-- Nạp qua JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cảnh báo cạn kho -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold m-0 text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Sắp hết hàng (Kho ≤ 5)</h6>
+                    <a href="/admin/products" class="small text-decoration-none fw-semibold">Nhập kho</a>
+                </div>
+                <div class="p-3" id="lowStockList">
+                    <!-- Nạp qua JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const token = localStorage.getItem('token');
+    let revenueChartInstance = null;
+
+    const STATUS_MAP = {
+        'PENDING': { text: 'Chờ duyệt', class: 'bg-warning-subtle text-warning-emphasis' },
+        'CONFIRMED': { text: 'Đã duyệt', class: 'bg-info-subtle text-info-emphasis' },
+        'SHIPPING': { text: 'Đang giao', class: 'bg-primary-subtle text-primary-emphasis' },
+        'DELIVERED': { text: 'Thành công', class: 'bg-success-subtle text-success-emphasis' },
+        'CANCELLED': { text: 'Đã hủy', class: 'bg-danger-subtle text-danger' }
+    };
+
+    if (!token) {
+        alert('Vui lòng đăng nhập với tài khoản Admin!');
+        window.location.href = '/login';
+    }
+
+    async function loadDashboardStats() {
+        try {
+            const res = await fetch('/api/admin/stats', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                renderDashboard(data);
+            } else if (res.status === 401 || res.status === 403) {
+                alert('Tài khoản không có quyền Admin!');
+                window.location.href = '/';
+            }
+        } catch (e) {
+            console.error('Lỗi nạp thống kê:', e);
+        }
+    }
+
+    function renderDashboard(data) {
+        // KPI Cards
+        document.getElementById('statRevenue').innerText = Number(data.totalRevenue || 0).toLocaleString('vi-VN') + ' đ';
+        document.getElementById('statCompletedOrders').innerText = data.completedOrdersCount || 0;
+        document.getElementById('statPendingOrders').innerText = data.pendingOrdersCount || 0;
+        document.getElementById('statTotalProducts').innerText = data.totalProductsCount || 0;
+
+        // Vẽ biểu đồ Chart.js
+        if (data.dailyRevenueLabels && data.dailyRevenueData) {
+            renderRevenueChart(data.dailyRevenueLabels, data.dailyRevenueData);
+        }
+
+        // Bảng đơn hàng gần đây
+        const tbody = document.getElementById('recentOrdersTbody');
+        tbody.innerHTML = '';
+        if (!data.recentOrders || data.recentOrders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted small">Chưa có đơn hàng nào</td></tr>';
+        } else {
+            data.recentOrders.forEach(o => {
+                const statusConfig = STATUS_MAP[o.status] || { text: o.status, class: 'bg-light text-dark' };
+                const total = Number(o.finalAmount || o.totalAmount || 0);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="ps-4 fw-bold small">#${o.id}</td>
+                    <td class="small">${o.customerName || (o.user ? o.user.fullName : 'Khách vãng lai')}</td>
+                    <td><span class="badge ${o.paymentMethod === 'BANKING' ? 'bg-primary-subtle text-primary' : 'bg-secondary-subtle text-secondary'}">${o.paymentMethod === 'BANKING' ? 'VNPAY' : 'COD'}</span></td>
+                    <td class="fw-bold text-danger small">${total.toLocaleString('vi-VN')} đ</td>
+                    <td><span class="badge ${statusConfig.class}">${statusConfig.text}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Danh sách cảnh báo cạn kho
+        const lowStockContainer = document.getElementById('lowStockList');
+        lowStockContainer.innerHTML = '';
+        if (!data.lowStockProducts || data.lowStockProducts.length === 0) {
+            lowStockContainer.innerHTML = '<div class="text-center py-4 text-muted small"><i class="fa-regular fa-circle-check text-success fs-4 d-block mb-1"></i>Mọi sản phẩm đều còn đủ số lượng tồn kho</div>';
+        } else {
+            data.lowStockProducts.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'd-flex justify-content-between align-items-center p-2 mb-2 bg-light rounded-3';
+                item.innerHTML = `
+                    <div class="d-flex align-items-center text-truncate pe-2">
+                        <img src="${p.imageUrl || 'https://placehold.co/40x40'}" style="width: 36px; height: 36px; object-fit: cover; border-radius: 6px;" class="me-2" alt="Ảnh">
+                        <div class="text-truncate">
+                            <span class="d-block text-truncate fw-semibold small" style="max-width: 170px;">${p.name}</span>
+                            <small class="text-muted">ID: #${p.id}</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-danger-subtle text-danger fw-bold">Còn ${p.stock}</span>
+                `;
+                lowStockContainer.appendChild(item);
+            });
+        }
+    }
+
+    function renderRevenueChart(labels, data) {
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(232, 90, 113, 0.45)');
+        gradient.addColorStop(1, 'rgba(232, 90, 113, 0.0)');
+
+        if (revenueChartInstance) {
+            revenueChartInstance.destroy();
+        }
+
+        revenueChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Doanh thu',
+                    data: data,
+                    borderColor: '#e85a71',
+                    backgroundColor: gradient,
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: '#e85a71',
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Doanh thu: ' + Number(context.raw).toLocaleString('vi-VN') + ' đ';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return Number(value).toLocaleString('vi-VN') + ' đ';
+                            }
+                        },
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    function logoutAdmin() {
+        localStorage.clear();
+        window.location.href = '/login';
+    }
+
+    window.onload = loadDashboardStats;
+</script>
+</body>
+</html>
