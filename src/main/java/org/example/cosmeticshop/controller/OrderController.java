@@ -1,17 +1,19 @@
 package org.example.cosmeticshop.controller;
 
+import org.example.cosmeticshop.dto.OrderAdminDto;
 import org.example.cosmeticshop.dto.OrderRequest;
 import org.example.cosmeticshop.entity.Order;
+import org.example.cosmeticshop.entity.OrderStatus;
 import org.example.cosmeticshop.service.OrderService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.example.cosmeticshop.entity.OrderStatus;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping("/api")
 public class OrderController {
 
     private final OrderService orderService;
@@ -20,41 +22,69 @@ public class OrderController {
         this.orderService = orderService;
     }
 
-    @PostMapping("/checkout")
-    public ResponseEntity<?> checkout(@RequestParam Long userId, @RequestBody OrderRequest request) {
-        try {
-            Order createdOrder = orderService.placeOrder(userId, request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdOrder);
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    // Đặt hàng mới
+    @PostMapping("/orders")
+    public ResponseEntity<?> createOrder(@RequestParam Long userId, @RequestBody OrderRequest request) {
+        Order order = orderService.placeOrder(userId, request);
+        return ResponseEntity.ok(order);
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Order>> getOrdersByUser(@PathVariable Long userId) {
+    // Lấy toàn bộ đơn hàng (Hỗ trợ cả /api/admin/orders và /api/orders để frontend gọi không bị 405)
+    @GetMapping({"/admin/orders", "/orders"})
+    public ResponseEntity<List<OrderAdminDto>> getAllAdminOrders() {
+        List<Order> orders = orderService.getAllOrders();
+
+        List<OrderAdminDto> dtos = orders.stream().map(o -> {
+            BigDecimal total = toBigDecimal(o.getTotalAmount());
+            BigDecimal finalAmt = o.getFinalAmount() != null ? toBigDecimal(o.getFinalAmount()) : total;
+            BigDecimal discount = toBigDecimal(o.getDiscountAmount());
+
+            return new OrderAdminDto(
+                    o.getId(),
+                    o.getOrderCode(),
+                    o.getCustomerName() != null ? o.getCustomerName() : (o.getUser() != null ? o.getUser().getFullName() : "Khách vãng lai"),
+                    o.getPhone(),
+                    o.getShippingAddress(),
+                    o.getPaymentMethod() != null ? o.getPaymentMethod().name() : "COD",
+                    total,
+                    finalAmt,
+                    discount,
+                    o.getStatus(),
+                    o.getCreatedAt()
+            );
+        }).toList();
+
+        return ResponseEntity.ok(dtos);
+    }
+
+    // Lấy danh sách đơn của một khách hàng
+    @GetMapping("/orders/user/{userId}")
+    public ResponseEntity<List<Order>> getOrdersByUserId(@PathVariable Long userId) {
         return ResponseEntity.ok(orderService.getOrdersByUser(userId));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getOrderById(@PathVariable Long id) {
-        try {
-            return ResponseEntity.ok(orderService.getOrderById(id));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
+    // Chi tiết một đơn hàng
+    @GetMapping("/orders/{orderId}")
+    public ResponseEntity<Order> getOrderById(@PathVariable Long orderId) {
+        return ResponseEntity.ok(orderService.getOrderById(orderId));
     }
-    // PUT: http://127.0.0.1:8080/api/orders/1/status?status=CONFIRMED
-    @PutMapping("/{id}/status")
-    public ResponseEntity<?> updateOrderStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
-        try {
-            Order updatedOrder = orderService.updateOrderStatus(id, status);
-            return ResponseEntity.ok(updatedOrder);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+
+    // Cập nhật trạng thái đơn hàng
+    @PutMapping({"/admin/orders/{orderId}/status", "/orders/{orderId}/status"})
+    public ResponseEntity<?> updateOrderStatus(@PathVariable Long orderId, @RequestParam OrderStatus status) {
+        Order order = orderService.updateOrderStatus(orderId, status);
+        return ResponseEntity.ok(Map.of("message", "Cập nhật trạng thái thành công!", "status", order.getStatus()));
     }
-    @GetMapping
-    public ResponseEntity<List<Order>> getAllOrders() {
-        return ResponseEntity.ok(orderService.getAllOrders());
+
+    // Chuyển đổi an toàn Double/BigDecimal sang BigDecimal cho DTO
+    private BigDecimal toBigDecimal(Object val) {
+        if (val == null) return BigDecimal.ZERO;
+        if (val instanceof BigDecimal) return (BigDecimal) val;
+        if (val instanceof Number) return BigDecimal.valueOf(((Number) val).doubleValue());
+        try {
+            return new BigDecimal(val.toString());
+        } catch (Exception e) {
+            return BigDecimal.ZERO;
+        }
     }
 }

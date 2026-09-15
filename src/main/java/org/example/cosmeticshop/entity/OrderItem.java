@@ -19,6 +19,7 @@ public class OrderItem {
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "brand", "category", "reviews", "orderItems"})
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;

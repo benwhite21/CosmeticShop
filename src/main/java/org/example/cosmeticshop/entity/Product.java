@@ -37,10 +37,12 @@ public class Product {
     @Enumerated(EnumType.STRING)
     private ProductStatus status = ProductStatus.ACTIVE;
 
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "products"})
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
 
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "products"})
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand_id")
     private Brand brand;
