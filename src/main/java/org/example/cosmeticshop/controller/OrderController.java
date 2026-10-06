@@ -22,14 +22,27 @@ public class OrderController {
         this.orderService = orderService;
     }
 
-    // Đặt hàng mới
-    @PostMapping("/orders")
-    public ResponseEntity<?> createOrder(@RequestParam Long userId, @RequestBody OrderRequest request) {
+    // Đặt hàng mới (hỗ trợ cả /api/orders, /api/orders/checkout và nhận RequestBody nếu có hoặc request rỗng)
+    @PostMapping({"/orders", "/orders/checkout"})
+    public ResponseEntity<?> createOrder(
+            @RequestParam Long userId,
+            @RequestBody(required = false) OrderRequest request
+    ) {
+        if (request == null) {
+            request = new OrderRequest();
+        }
         Order order = orderService.placeOrder(userId, request);
         return ResponseEntity.ok(order);
     }
 
-    // Lấy toàn bộ đơn hàng (Hỗ trợ cả /api/admin/orders và /api/orders để frontend gọi không bị 405)
+    // Đề phòng frontend gọi Checkout bằng GET /api/orders/checkout?userId=...
+    @GetMapping("/orders/checkout")
+    public ResponseEntity<?> checkoutByGet(@RequestParam Long userId) {
+        Order order = orderService.placeOrder(userId, new OrderRequest());
+        return ResponseEntity.ok(order);
+    }
+
+    // Lấy toàn bộ đơn hàng (Hỗ trợ cả /api/admin/orders và /api/orders cho giao diện quản trị)
     @GetMapping({"/admin/orders", "/orders"})
     public ResponseEntity<List<OrderAdminDto>> getAllAdminOrders() {
         List<Order> orders = orderService.getAllOrders();
