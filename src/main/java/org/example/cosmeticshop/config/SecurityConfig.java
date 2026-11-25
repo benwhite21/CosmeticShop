@@ -64,8 +64,8 @@ public class SecurityConfig {
                                 "/api/payment/vnpay-callback"
                         ).permitAll()
 
-                        // 3. API xác thực công khai
-                        .requestMatchers("/api/auth/**").permitAll()
+                        // 3. API xác thực công khai & AI tư vấn khách hàng
+                        .requestMatchers("/api/auth/**", "/api/ai/**").permitAll()
 
                         // 4. API đọc dữ liệu sản phẩm / danh mục công khai
                         .requestMatchers(HttpMethod.GET,

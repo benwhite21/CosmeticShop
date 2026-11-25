@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="chatWidget">
+  <style>
+    /* Nút bong bóng mở chat ở góc dưới bên phải */
+    #ai-chat-toggle {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e84393, #fd79a8);
+      color: #fff;
+      border: none;
+      box-shadow: 0 6px 18px rgba(232, 67, 147, 0.35);
+      cursor: pointer;
+      font-size: 24px;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease;
+    }
+    #ai-chat-toggle:hover {
+      transform: scale(1.08);
+    }
+
+    /* Khung cửa sổ chat */
+    #ai-chat-box {
+      position: fixed;
+      bottom: 94px;
+      right: 24px;
+      width: 360px;
+      max-width: calc(100vw - 32px);
+      height: 490px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 9999;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      border: 1px solid #f3e6ec;
+    }
+    #ai-chat-box.open {
+      display: flex;
+    }
+
+    /* Header */
+    .ai-chat-header {
+      background: linear-gradient(135deg, #e84393, #fd79a8);
+      color: #fff;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ai-chat-header h4 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .ai-chat-header span {
+      font-size: 11px;
+      opacity: 0.9;
+    }
+    #ai-chat-close {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    /* Thanh chọn loại da */
+    .ai-skin-bar {
+      padding: 8px 12px;
+      background: #fff5f8;
+      border-bottom: 1px solid #f3e6ec;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #555;
+    }
+    .ai-skin-bar select {
+      flex: 1;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #e0c4d0;
+      font-size: 12px;
+      outline: none;
+      background: #fff;
+    }
+
+    /* Khu vực tin nhắn */
+    #ai-chat-messages {
+      flex: 1;
+      padding: 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #fafafa;
+    }
+    .ai-msg {
+      max-width: 82%;
+      padding: 10px 13px;
+      border-radius: 14px;
+      font-size: 13.5px;
+      line-height: 1.45;
+      word-wrap: break-word;
+    }
+    .ai-msg.bot {
+      align-self: flex-start;
+      background: #fff;
+      color: #333;
+      border: 1px solid #eee;
+      border-bottom-left-radius: 4px;
+    }
+    .ai-msg.user {
+      align-self: flex-end;
+      background: #e84393;
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+
+    /* Ô nhập tin nhắn */
+    .ai-chat-input-area {
+      display: flex;
+      padding: 10px;
+      background: #fff;
+      border-top: 1px solid #eee;
+      gap: 8px;
+    }
+    #ai-chat-input {
+      flex: 1;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-size: 13.5px;
+      outline: none;
+    }
+    #ai-chat-input:focus {
+      border-color: #e84393;
+    }
+    #ai-chat-send {
+      background: #e84393;
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: 0 16px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #ai-chat-send:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+  </style>
+
+  <!-- Nút mở chat -->
+  <button id="ai-chat-toggle" title="Tư vấn mỹ phẩm cùng AI">💬</button>
+
+  <!-- Cửa sổ chat -->
+  <div id="ai-chat-box">
+    <div class="ai-chat-header">
+      <div>
+        <h4>Trợ lý CosmeticShop AI</h4>
+        <span>Tư vấn chọn mỹ phẩm phù hợp làn da</span>
+      </div>
+      <button id="ai-chat-close" title="Đóng">&times;</button>
+    </div>
+
+    <div class="ai-skin-bar">
+      <label for="ai-skin-type">Loại da:</label>
+      <select id="ai-skin-type">
+        <option value="">-- Chưa xác định --</option>
+        <option value="Da dầu">Da dầu</option>
+        <option value="Da dầu mụn">Da dầu mụn</option>
+        <option value="Da khô">Da khô</option>
+        <option value="Da hỗn hợp">Da hỗn hợp</option>
+        <option value="Da nhạy cảm">Da nhạy cảm</option>
+        <option value="Da thường">Da thường</option>
+      </select>
+    </div>
+
+    <div id="ai-chat-messages">
+      <div class="ai-msg bot">
+        Xin chào! Mình là chuyên viên tư vấn AI của <strong>CosmeticShop</strong>. Bạn đang cần tìm sản phẩm chăm sóc da hay trang điểm nào ạ?
+      </div>
+    </div>
+
+    <div class="ai-chat-input-area">
+      <input type="text" id="ai-chat-input" placeholder="Nhập câu hỏi tư vấn..." autocomplete="off">
+      <button id="ai-chat-send">Gửi</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const toggleBtn = document.getElementById("ai-chat-toggle");
+      const closeBtn = document.getElementById("ai-chat-close");
+      const chatBox = document.getElementById("ai-chat-box");
+      const sendBtn = document.getElementById("ai-chat-send");
+      const inputEl = document.getElementById("ai-chat-input");
+      const messagesEl = document.getElementById("ai-chat-messages");
+      const skinTypeEl = document.getElementById("ai-skin-type");
+
+      toggleBtn.addEventListener("click", () => chatBox.classList.toggle("open"));
+      closeBtn.addEventListener("click", () => chatBox.classList.remove("open"));
+
+      function formatReply(text) {
+        return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                .replace(/\n/g, "<br>");
+      }
+
+      function appendMessage(text, sender, isHtml = false) {
+        const div = document.createElement("div");
+        div.className = "ai-msg " + sender;
+        if (isHtml) {
+          div.innerHTML = text;
+        } else {
+          div.textContent = text;
+        }
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return div;
+      }
+
+      async function sendMessage() {
+        const message = inputEl.value.trim();
+        if (!message) return;
+
+        appendMessage(message, "user");
+        inputEl.value = "";
+        inputEl.disabled = true;
+        sendBtn.disabled = true;
+
+        const typingMsg = appendMessage("Đang tìm sản phẩm phù hợp cho bạn...", "bot");
+
+        try {
+          const response = await fetch("/api/ai/consult", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              skinType: skinTypeEl.value,
+              message: message
+            })
+          });
+
+          const data = await response.json();
+          typingMsg.innerHTML = formatReply(data.reply || "Xin lỗi, hiện mình chưa thể phản hồi.");
+        } catch (err) {
+          typingMsg.textContent = "Lỗi kết nối máy chủ, bạn vui lòng thử lại nhé!";
+        } finally {
+          inputEl.disabled = false;
+          sendBtn.disabled = false;
+          inputEl.focus();
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+      }
+
+      sendBtn.addEventListener("click", sendMessage);
+      inputEl.addEventListener("keypress", function (e) {
+        if (e.key === "Enter") {
+          sendMessage();
+        }
+      });
+    });
+  </script>
+</div>
+
+</body>
+</html>
