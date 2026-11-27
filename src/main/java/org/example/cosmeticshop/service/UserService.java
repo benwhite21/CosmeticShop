@@ -10,7 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class UserService {
@@ -20,6 +23,10 @@ public class UserService {
 
     @Autowired(required = false)
     private RoleRepository roleRepository;
+
+    // Bộ nhớ tạm phục vụ Unit Test khi chưa kết nối DB (giống ProductService, CartService)
+    private final List<User> memoryUsers = new ArrayList<>();
+    private final AtomicLong userIdGen = new AtomicLong(1);
 
     public UserService() {}
 
@@ -35,14 +42,34 @@ public class UserService {
 
     @Transactional
     public User register(RegisterRequest req) {
+        if (req == null) {
+            throw new IllegalArgumentException("Thông tin đăng ký không được để trống");
+        }
         if (req.getEmail() == null || req.getEmail().isBlank()) {
             throw new IllegalArgumentException("Email không được để trống");
+        }
+        String cleanEmail = req.getEmail().trim();
+        if (!cleanEmail.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            throw new IllegalArgumentException("Email không đúng định dạng");
         }
         if (req.getPassword() == null || req.getPassword().isBlank()) {
             throw new IllegalArgumentException("Mật khẩu không được để trống");
         }
-        if (userRepository != null && userRepository.existsByEmail(req.getEmail().trim())) {
-            throw new IllegalArgumentException("Email đã được sử dụng");
+        if (req.getPassword().length() < 6) {
+            throw new IllegalArgumentException("Mật khẩu phải có ít nhất 6 ký tự");
+        }
+
+        // Kiểm tra trùng email (cả trong DB lẫn bộ nhớ tạm)
+        if (userRepository != null) {
+            if (userRepository.existsByEmail(cleanEmail)) {
+                throw new IllegalArgumentException("Email đã tồn tại");
+            }
+        } else {
+            boolean existsInMemory = memoryUsers.stream()
+                    .anyMatch(u -> u.getEmail().equalsIgnoreCase(cleanEmail));
+            if (existsInMemory) {
+                throw new IllegalArgumentException("Email đã tồn tại");
+            }
         }
 
         Role customerRole = null;
@@ -53,7 +80,7 @@ public class UserService {
 
         User user = new User();
         user.setFullName(req.getFullName());
-        user.setEmail(req.getEmail().trim());
+        user.setEmail(cleanEmail);
         user.setPhone(req.getPhone());
         user.setPassword(req.getPassword());
         user.setActive(true);
@@ -61,7 +88,13 @@ public class UserService {
             user.setRoles(Set.of(customerRole));
         }
 
-        return userRepository != null ? userRepository.save(user) : user;
+        if (userRepository != null) {
+            return userRepository.save(user);
+        } else {
+            user.setId(userIdGen.getAndIncrement());
+            memoryUsers.add(user);
+            return user;
+        }
     }
 
     public User login(String email, String password) {
@@ -69,12 +102,21 @@ public class UserService {
     }
 
     public User login(LoginRequest req) {
-        if (userRepository == null) {
-            throw new IllegalStateException("UserRepository chưa được khởi tạo");
+        if (req == null || req.getEmail() == null || req.getEmail().isBlank()) {
+            throw new IllegalArgumentException("Email không được để trống");
         }
+        String cleanEmail = req.getEmail().trim();
 
-        User user = userRepository.findByEmail(req.getEmail().trim())
-                .orElseThrow(() -> new IllegalArgumentException("Sai tài khoản hoặc mật khẩu"));
+        User user;
+        if (userRepository != null) {
+            user = userRepository.findByEmail(cleanEmail)
+                    .orElseThrow(() -> new IllegalArgumentException("Sai tài khoản hoặc mật khẩu"));
+        } else {
+            user = memoryUsers.stream()
+                    .filter(u -> u.getEmail().equalsIgnoreCase(cleanEmail))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Sai tài khoản hoặc mật khẩu"));
+        }
 
         if (!user.getPassword().equals(req.getPassword())) {
             throw new IllegalArgumentException("Sai tài khoản hoặc mật khẩu");
@@ -89,7 +131,10 @@ public class UserService {
 
     public User findById(Long id) {
         if (userRepository == null) {
-            throw new IllegalStateException("UserRepository chưa được khởi tạo");
+            return memoryUsers.stream()
+                    .filter(u -> u.getId().equals(id))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng với ID: " + id));
         }
         return userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng với ID: " + id));

@@ -78,7 +78,7 @@ public class AiConsultationService {
                 System.out.println("Danh sách model khả dụng trên Key: " + cachedValidModels);
             }
         } catch (Exception e) {
-            System.err.println("Không lấy được danh sách model: " + e.getMessage());
+            System.out.println("Không lấy được danh sách model: " + e.getMessage());
         }
 
         if (cachedValidModels.isEmpty()) {

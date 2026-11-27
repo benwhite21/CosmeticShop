@@ -1,15 +1,19 @@
 package org.example.cosmeticshop.service;
 
 import org.example.cosmeticshop.entity.*;
-import org.example.cosmeticshop.service.*;
+import org.example.cosmeticshop.repository.ProductRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
 class CosmeticShopServiceTest {
 
@@ -177,10 +181,8 @@ class CosmeticShopServiceTest {
             assertNotNull(order);
             assertEquals(OrderStatus.PENDING, order.getStatus());
             assertEquals(300000.0, order.getTotalAmount());
-            // Kiểm tra tồn kho đã giảm từ 20 -> 18
             assertEquals(18, productService.getProductById(p1.getId()).getStock());
 
-            // Admin duyệt đơn hàng sang CONFIRMED
             Order updated = orderService.updateOrderStatus(order.getId(), OrderStatus.CONFIRMED);
             assertEquals(OrderStatus.CONFIRMED, updated.getStatus());
         }
@@ -191,6 +193,56 @@ class CosmeticShopServiceTest {
             assertThrows(IllegalArgumentException.class, () ->
                     orderService.createOrder(1L, "Lê Văn C", "0909123456", "Hà Nội", PaymentMethod.COD, List.of())
             );
+        }
+    }
+
+    // ==========================================
+    // LUỒNG 8: TƯ VẤN KHÁCH HÀNG BẰNG AI
+    // ==========================================
+    @Nested
+    @DisplayName("Tests for AI Consultation Service")
+    class AiConsultationTests {
+
+        private ProductRepository mockProductRepository;
+        private AiConsultationService aiConsultationService;
+
+        @BeforeEach
+        void initAiService() {
+            mockProductRepository = Mockito.mock(ProductRepository.class);
+            aiConsultationService = new AiConsultationService(mockProductRepository);
+            ReflectionTestUtils.setField(aiConsultationService, "apiKey", "INVALID_TEST_KEY");
+        }
+
+        @Test
+        @DisplayName("Gợi ý đúng sản phẩm trong kho theo từ khóa & loại da khi kích hoạt Fallback")
+        void testAiConsultCustomer_FallbackMatchesProduct() {
+            Product p = new Product();
+            p.setName("kem chống nắng anessa");
+            p.setPrice(BigDecimal.valueOf(350000));
+            p.setDescription("Kiềm dầu tốt cho da dầu mụn");
+
+            when(mockProductRepository.findAll()).thenReturn(List.of(p));
+
+            String reply = aiConsultationService.consultCustomer(
+                    "Tư vấn giúp mình kem chống nắng anessa nhé",
+                    "Da dầu mụn"
+            );
+
+            assertNotNull(reply);
+            assertTrue(reply.contains("Da dầu mụn"));
+            assertTrue(reply.contains("kem chống nắng anessa"));
+            assertTrue(reply.contains("350000"));
+        }
+
+        @Test
+        @DisplayName("Phản hồi an toàn khi không tìm thấy sản phẩm khớp từ khóa")
+        void testAiConsultCustomer_NoProductMatched() {
+            when(mockProductRepository.findAll()).thenReturn(List.of());
+
+            String reply = aiConsultationService.consultCustomer("Tư vấn nước hoa nam", null);
+
+            assertNotNull(reply);
+            assertTrue(reply.contains("CosmeticShop"));
         }
     }
 }
